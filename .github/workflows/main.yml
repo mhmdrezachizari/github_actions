@@ -24,7 +24,7 @@ jobs:
       - name: Copy files to server
         run: |
           # This copies the whole project to the server
-          scp -i ~/.ssh/id_rsa -r ./ user@your-server:/home/
+          scp -i ~/.ssh/id_rsa -r ./ root@62.60.198.45:/home/
 
       - name: Install dependencies
         run: |
