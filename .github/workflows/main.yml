@@ -1,53 +1,30 @@
-name: Deploy to VPS
+name: Deploy to Server
 
 on:
   push:
     branches:
-      - main  # اجرا هنگام Push روی شاخه main
+      - main
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-    # دریافت کد پروژه
-    - name: Checkout code
-      uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v2
 
-    # راه‌اندازی Docker Buildx
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v2
+      - name: Set up SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
 
-    # کش کردن لایه‌های Docker برای افزایش سرعت Build
-    - name: Cache Docker layers
-      uses: actions/cache@v3
-      with:
-        path: /tmp/.buildx-cache
-        key: ${{ runner.os }}-buildx-${{ github.sha }}
-        restore-keys: |
-          ${{ runner.os }}-buildx-
+      - name: Copy files to server
+        run: |
+          scp -i ~/.ssh/id_rsa -r ./your-project-directory user@your-server:/path/to/destination
 
-    # ورود به Docker Hub بدون Secrets
-    - name: Log in to Docker Hub
-      run: |
-        echo "dckr_pat_Q4kfrG9v_85uwA7I9YqOSLB4PfQ" | docker login -u "mhmdrezachizari" --password-stdin
-
-    # ساخت و انتشار Docker Image
-    - name: Build and push Docker image
-      run: |
-        docker build -t mhmdrezachizari/myapp:latest -f Dockerfile .
-        docker push mhmdrezachizari/myapp:latest
-
-    # ورود به VPS و استقرار پروژه
-    - name: Deploy to VPS
-      uses: appleboy/ssh-action@v0.1.5
-      with:
-        host: "62.60.198.45"
-        username: "root "
-        key: "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"
-        port: 22
-        script: |
-          docker pull mhmdrezachizari/myapp:latest
-          docker stop myapp || true
-          docker rm myapp || true
-          docker run -d --name myapp -p 80:8000 mhmdrezachizari/myapp:latest
+      - name: Run deployment commands
+        run: |
+          ssh -i ~/.ssh/id_rsa user@your-server 'bash -s' < ./deploy_script.sh
