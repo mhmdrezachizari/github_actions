@@ -1,4 +1,4 @@
-name: Deploy to Server
+name: CI/CD Pipeline for Docker and VPS Deployment
 
 on:
   push:
@@ -10,21 +10,27 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
-
-      - name: Set up SSH key
+      # Step 1: Log in to Docker Hub
+      - name: Log in to Docker Hub
         run: |
-          mkdir -p ~/.ssh
-          echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-        env:
-          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          echo "dckr_pat_Q4kfrG9v_85uwA7I9YqOSLB4PfQ" | docker login -u "mhmdrezachizari" --password-stdin
 
-      - name: Copy files to server
+      # Step 2: Build and push Docker image
+      - name: Build and push Docker image
         run: |
-          scp -i ~/.ssh/id_rsa -r ./your-project-directory user@your-server:/path/to/destination
+          docker build -t mhmdrezachizari/myapp:latest -f Dockerfile .
+          docker push mhmdrezachizari/myapp:latest
 
-      - name: Run deployment commands
-        run: |
-          ssh -i ~/.ssh/id_rsa user@your-server 'bash -s' < ./deploy_script.sh
+      # Step 3: Deploy to VPS
+      - name: Deploy to VPS
+        uses: appleboy/ssh-action@v0.1.5
+        with:
+          host: "62.60.198.45"
+          username: "root"
+          key: ${{ secrets.SSH_PRIVATE_KEY }}  # Make sure to store your SSH key in GitHub Secrets
+          port: 22
+          script: |
+            cd /path/to/project/directory
+            docker pull mhmdrezachizari/myapp:latest
+            docker-compose down
+            docker-compose up -d
