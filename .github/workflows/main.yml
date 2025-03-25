@@ -1,39 +1,54 @@
-name: CI/CD Pipeline for VPS Deployment
+name: Deploy Django to Server
 
 on:
   push:
     branches:
-      - main
+      - main  # Deploy when code is pushed to the main branch
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Log in to the server using SSH and deploy the project
-      - name: Deploy to VPS
-        uses: appleboy/ssh-action@v0.1.5
-        with:
-          host: "62.60.198.45"  # IP of your VPS
-          username: "root"  # Username for your VPS (could be different)
-          key: ${{ secrets.SSH_PRIVATE_KEY }}  # Your SSH private key stored in GitHub Secrets
-          port: 22  # Port for SSH connection (default is 22)
-          script: |
-            # Change to your project directory on the server
-            cd /path/to/your/project
+      - name: Checkout code
+        uses: actions/checkout@v2
 
-            # Pull the latest code from GitHub repository (make sure git is installed)
-            git pull origin main
+      - name: Set up SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
 
-            # Install dependencies (example: if you're using Node.js or Python)
-            # For a Node.js app, run:
-            # npm install
-            # For a Python app, run:
-            # pip install -r requirements.txt
+      - name: Copy files to server
+        run: |
+          # This copies the whole project to the server
+          scp -i ~/.ssh/id_rsa -r ./ user@your-server:/home/
 
-            # Restart your application (example: for a Node.js app using pm2)
-            # pm2 restart your-app-name
-            # For a Django app, you might use:
-            # python manage.py migrate
-            # python manage.py collectstatic --noinput
-            # systemctl restart your-app-service  # If you're using a systemd service for your app
+      - name: Install dependencies
+        run: |
+          # SSH into the server and install dependencies
+          ssh -i ~/.ssh/id_rsa user@your-server << 'EOF'
+            cd /path/to/project/directory
+            python3 -m venv venv
+            source venv/bin/activate
+            pip install -r requirements.txt
+          EOF
+
+      - name: Run migrations and collectstatic
+        run: |
+          # SSH into the server and run Django commands
+          ssh -i ~/.ssh/id_rsa user@your-server << 'EOF'
+            cd /path/to/project/directory
+            source venv/bin/activate
+            python manage.py migrate
+            python manage.py collectstatic --noinput
+          EOF
+
+      - name: Restart application (if using systemd or pm2)
+        run: |
+          # Restart the application (adjust based on your server setup)
+          ssh -i ~/.ssh/id_rsa user@your-server << 'EOF'
+            sudo systemctl restart your-app.service
+          EOF
