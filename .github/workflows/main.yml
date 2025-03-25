@@ -1,4 +1,4 @@
-name: CI/CD Pipeline for Docker and VPS Deployment
+name: CI/CD Pipeline for VPS Deployment
 
 on:
   push:
@@ -10,27 +10,30 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Log in to Docker Hub
-      - name: Log in to Docker Hub
-        run: |
-          echo "dckr_pat_Q4kfrG9v_85uwA7I9YqOSLB4PfQ" | docker login -u "mhmdrezachizari" --password-stdin
-
-      # Step 2: Build and push Docker image
-      - name: Build and push Docker image
-        run: |
-          docker build -t mhmdrezachizari/myapp:latest -f Dockerfile .
-          docker push mhmdrezachizari/myapp:latest
-
-      # Step 3: Deploy to VPS
+      # Step 1: Log in to the server using SSH and deploy the project
       - name: Deploy to VPS
         uses: appleboy/ssh-action@v0.1.5
         with:
-          host: "62.60.198.45"
-          username: "root"
-          key: ${{ secrets.SSH_PRIVATE_KEY }}  # Make sure to store your SSH key in GitHub Secrets
-          port: 22
+          host: "62.60.198.45"  # IP of your VPS
+          username: "root"  # Username for your VPS (could be different)
+          key: ${{ secrets.SSH_PRIVATE_KEY }}  # Your SSH private key stored in GitHub Secrets
+          port: 22  # Port for SSH connection (default is 22)
           script: |
-            cd /path/to/project/directory
-            docker pull mhmdrezachizari/myapp:latest
-            docker-compose down
-            docker-compose up -d
+            # Change to your project directory on the server
+            cd /path/to/your/project
+
+            # Pull the latest code from GitHub repository (make sure git is installed)
+            git pull origin main
+
+            # Install dependencies (example: if you're using Node.js or Python)
+            # For a Node.js app, run:
+            # npm install
+            # For a Python app, run:
+            # pip install -r requirements.txt
+
+            # Restart your application (example: for a Node.js app using pm2)
+            # pm2 restart your-app-name
+            # For a Django app, you might use:
+            # python manage.py migrate
+            # python manage.py collectstatic --noinput
+            # systemctl restart your-app-service  # If you're using a systemd service for your app
