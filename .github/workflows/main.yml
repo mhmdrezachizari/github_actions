@@ -11,12 +11,8 @@ jobs:
 
     steps:
     # دریافت کد پروژه
-    - name: Cache Docker layers
-      uses: actions/cache@v3
-
-
-    - name: Check if Dockerfile exists
-      run: ls -la  # بررسی فایل‌های موجود
+    - name: Checkout code
+      uses: actions/checkout@v3
 
     # راه‌اندازی Docker Buildx
     - name: Set up Docker Buildx
@@ -39,7 +35,7 @@ jobs:
     # ساخت و انتشار Docker Image
     - name: Build and push Docker image
       run: |
-        docker build -t mhmdrezachizari/myapp:latest .
+        docker build -t mhmdrezachizari/myapp:latest -f Dockerfile .
         docker push mhmdrezachizari/myapp:latest
 
     # ورود به VPS و استقرار پروژه
