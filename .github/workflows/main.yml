@@ -3,32 +3,33 @@ name: Deploy DRF to VPS
 on:
   push:
     branches:
-      - main  # وقتی روی main پوش می‌کنی اجرا می‌شه
+      - main
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v3
+    - name: Checkout code
+      uses: actions/checkout@v3
 
-      - name: Set up SSH
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts
-
-      - name: Deploy to Server
-        run: |
-          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} << 'EOF'
-          cd /home/
+    - name: Deploy to VPS
+      env:
+        SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        VPS_HOST: ${{ secrets.SERVER_IP }}
+        VPS_USER: ${{ secrets.SERVER_USER }}
+      run: |
+        echo "$SSH_PRIVATE_KEY" > private_key
+        chmod 600 private_key
+        ssh -o StrictHostKeyChecking=no -i private_key $VPS_USER@$VPS_HOST << 'EOF'
+          cd ~/github_actions
           git pull origin main
-          source venv/bin/activate
+          source ../venv/bin/activate
           pip install -r requirements.txt
           python manage.py migrate
           python manage.py collectstatic --noinput
-          systemctl restart gunicorn  # اگر از Gunicorn استفاده می‌کنی
-          systemctl restart nginx     # اگر Nginx داری
-          EOF
+          # اگه سشن قبلی وجود داره، متوقفش کن
+          screen -S django -X quit || true
+          # سرور رو توی سشن جدید اجرا کن
+          screen -dmS django bash -c "source ../venv/bin/activate && python manage.py runserver 0.0.0.0:8000"
+        EOF
